@@ -1,0 +1,12 @@
+dotenv==0.9.9
+httpx==0.28.1
+matplotlib-inline==0.2.1
+nest-asyncio==1.6.0
+numpy==2.4.3
+pandas==3.0.1
+parso==0.8.6
+python-dotenv==1.2.2
+requests==2.32.5
+SQLAlchemy==2.0.48
+tornado==6.5.5
+tqdm==4.67.3
