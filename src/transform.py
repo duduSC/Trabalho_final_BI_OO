@@ -68,3 +68,21 @@ class Transform:
         df_bridge = df_explode.merge(dim_genero,on="nome",how="inner")
         df_bridge= df_bridge.rename(columns={"id":"id_genero"})
         return df_bridge
+    
+    @staticmethod
+    def create_dim_data(df: pd.DataFrame):
+        df_limpo = df.copy()
+        df_limpo["data"] = pd.to_datetime(df_limpo,errors="coerce")
+
+        df_limpo = df_limpo.dropna(subset=["data"])
+        dim_data = df_limpo.copy()
+        dim_data = df_limpo.assign(
+            ano = (dim_data["data"].dt.year).astype(int),
+            mes = (dim_data["data"].dt.month).astype(int),
+            dia= (dim_data["data"].dt.month).astype(int),
+            semestre = np.where(dim_data["data"].dt.quarter>2,1,2),
+            dia_da_semana= (dim_data["data"].dt.day_of_week).astype(int)
+        )
+        dim_data["sk_data"] = dim_data["data"].astype(str).replace("-","")
+        dim_data = dim_data.drop(columns=["data"])
+        return dim_data
