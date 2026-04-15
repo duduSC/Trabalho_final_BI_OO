@@ -52,33 +52,27 @@ class ExtractorJson(BaseExtractor):
         """Logic to read json file"""
         return pd.read_json(self.file_path)
 
-class ExtractorTMDB(BaseExtractor):
+class ExtractorTMDB():
     """Extractor for TMDB"""
     
     def __init__(self, api_key:str):
         self.api_key = api_key
         self.base_url = "https://api.themoviedb.org/3"
-        self.lista_ids = dict()
         self.semaphore = asyncio.Semaphore(40)
 
-    async def _busca_data_completa(self,client:httpx.AsyncClient,id_imdb):
-        """Will send async requests to API"""
-        
+
+    async def busca_dados_completo(self,client:httpx.AsyncClient,id):
+        """Retorna em formato JSON o id, data de lançamento, orçamento e receita"""
+        full_api= f"{self.base_url}/movie/{id}?api_key={self.api_key}"
         async with self.semaphore:
-            full_api = f"{self.base_url}/find/{id_imdb}?api_key={self.api_key}&external_source=imdb_i"
             try:
                 resp = await client.get(full_api,timeout=10.0)
                 if resp.status_code == 200:
                     dados = resp.json()
-                    results = dados.get("movie_results")
-                    data= results[0].get("release_date")
-                    self.lista_ids["id_imdb"]= data
-                    return {"data":data}
+                    return {"imdb_id":dados.get("imdb_id"), "data_lancamento":dados.get("release_date"),
+                            "orcamento":dados.get("budget"),"receita":dados.get("revenue")}
+                print(resp.status_code)
                 return None
             except Exception as error:
-                print(f"Erro ao buscar filme pelo {id_imdb}\nErro: {error}")
-                return None
-                
-    @override
-    def _extract_data(self):
-        """That method will send requests to api"""
+                print("Não foi possivel fazer os requests")
+                return error

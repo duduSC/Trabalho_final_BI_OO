@@ -12,8 +12,9 @@ class Transform:
             df_limpo =(
                 df_limpo.replace([r"\N",None,""],pd.NA)
                 .drop_duplicates(['id'])
-                .dropna()
-                .drop(columns=["personagem","nomeArtista","anoNascimento","anoFalecimento","profissao","titulosMaisConhecidos","generoArtista"])
+                .drop(columns=[
+                    "personagem","nomeArtista","anoNascimento","anoFalecimento","profissao",
+                    "titulosMaisConhecidos","generoArtista"])
                 .rename(columns={
                     "id":"id_imdb",
                     "tituloPincipal":"titulo_principal",
@@ -21,9 +22,12 @@ class Transform:
                     "notaMedia":"nota_media",
                     "numeroVotos":"numero_votos",
                     "tempoMinutos":"tempo_minutos"})
+                .dropna()
+
                 )
+
             df_limpo["genero"] = df_limpo["genero"].str.split(",")
-            df_limpo = df_limpo[df_limpo["numero_votos"] > 1000]
+            df_limpo = df_limpo[df_limpo["numero_votos"] > 100]
             return df_limpo
         
         except Exception as error:
@@ -32,14 +36,14 @@ class Transform:
     
     @staticmethod
     def create_dim_filme(df_limpo:pd.DataFrame)-> pd.DataFrame:
-        """Create the DF dim_filme"""
+        """Create DF dim_filme"""
         dim_filme = df_limpo.copy()
         dim_filme = dim_filme[["id_imdb","titulo_principal","titulo_original"]]
         dim_filme["id_imdb"]= dim_filme["id_imdb"].astype(str)
         return dim_filme
     @staticmethod
     def create_dim_genero( df_limpo:pd.DataFrame)-> pd.DataFrame:
-        """Create the DF dim_genero"""
+        """Create DF dim_genero"""
         
         dim_genero= df_limpo[["genero"]].copy()
         dim_genero = (
@@ -56,7 +60,7 @@ class Transform:
     
     @staticmethod
     def create_bridge_filme_genero(df_limpo:pd.DataFrame,dim_genero:pd.DataFrame)-> pd.DataFrame:
-        """Create the DF dim_data"""
+        """Create DF dim_data"""
         
         df_explode = df_limpo.copy()
         df_explode = df_explode[["id_imdb","genero"]]
@@ -71,6 +75,7 @@ class Transform:
     
     @staticmethod
     def create_dim_data(df: pd.DataFrame):
+        """Create dim_data"""
         df_limpo = df.copy()
         df_limpo["data"] = pd.to_datetime(df_limpo,errors="coerce")
 
@@ -86,3 +91,5 @@ class Transform:
         dim_data["sk_data"] = dim_data["data"].astype(str).replace("-","")
         dim_data = dim_data.drop(columns=["data"])
         return dim_data
+
+    def create_fato_filme()
