@@ -1,12 +1,14 @@
+import sys
+import traceback
+
 from src.extract import ExtractorCSV,ExtractorTMDB
 from src.transform import Transform
 from src.load import Loader
 import os
 from dotenv import load_dotenv
-import httpx
-
-
+import pandas as pd
 load_dotenv()
+
 class PipelineETL():
     """Orquestra as 3 etapas do pipeline"""
     def __init__(self,input_path: str):
@@ -15,18 +17,44 @@ class PipelineETL():
         self.extractor_tmdb = ExtractorTMDB(self.API_KEY)
         self.transform = Transform()
         self.load = Loader()
-        self.limit = httpx.Limits(max_connections=50,max_keepalive_connections=20)
 
 
-    async def run(self):
+    def run(self):
         print("=== Iniciando o Processo ETL ===")
 
-        df_lido = self.extractor_csv.read_data()
+        try:
+            # Camada RAW
+            df_lido = self.extractor_csv.read_data()    
+            self.load.save_data(df_lido,"raw","arquivo_csv")
+            # Camada TRUSTED
+            df_limpo = self.transform.process_data(df_lido)
+            self.load.save_data(df_limpo,"trusted","arquivo_csv")
+
+            # Preparação para Camada REFINED
+            dim_filme = self.transform.create_dim_filme(df_limpo)
+            dim_genero = self.transform.create_dim_genero(df_limpo)
             
-        df_limpo = self.transform.process_data(df_lido)
+            # Extração da API e camada RAW
+            lista_ids = dim_filme["imdb_id"].to_list()
+            lista_tmdb = self.extractor_tmdb.extract_dados_em_lote(lista_ids)
+            df_tmdb = pd.DataFrame(lista_tmdb)
+            self.load.save_data(df_tmdb,"raw","arquivo_json")
 
-        dim_filme = self.transform.create_dim_filme(df_limpo)
+            
+            # Camada REFINED
+            df_limpo= df_limpo.merge(df_tmdb,on="imdb_id",how="inner")
+            dim_data = self.transform.create_dim_data(df_limpo)
+            fato_filme = self.transform.create_fato_filme(df_limpo,dim_filme,dim_genero,dim_data)
 
-        dim_genero = self.transform.create_dim_genero()
-
-        bridge_filme_genero = self.transform.create_bridge_filme_genero(df_limpo,dim_genero)
+            self.load.save_data(dim_filme,"refined","dim_filme")
+            self.load.save_data(dim_genero,"refined","dim_genero")
+            self.load.save_data(dim_data,"refined","dim_data")
+            self.load.save_data(fato_filme,"refined","fato_filme")
+        except Exception as fatal_error:
+            print("\n" + "="*50)
+            print("🚨 FALHA CRÍTICA NO PIPELINE 🚨")
+            print("="*50)
+            print("\nMatando a execução para proteger a integridade dos dados...")
+            print(traceback.print_exc())
+            # O código 1 avisa ao sistema operacional (Windows/Linux) que o programa falhou
+            sys.exit(1)

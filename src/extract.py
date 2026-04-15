@@ -17,7 +17,7 @@ class BaseExtractor(ABC):
 
     def __init__(self,file_path: str):
         self.file_path = file_path
-
+        self.lista_resultados_tmdb= list()
 
     def read_data(self)-> pd.DataFrame | None:
         """Method that forces subclass to implement it and is intended for overriding"""
@@ -29,6 +29,7 @@ class BaseExtractor(ABC):
             return df
         except Exception as error:
             print(f"Error while reading {error}")
+            raise error
 
     @abstractmethod
     def _extract_data(self) ->pd.DataFrame:
@@ -41,7 +42,7 @@ class ExtractorCSV(BaseExtractor):
     @override
     def _extract_data(self):
         """Logic to read csv file"""
-        return pd.read_csv(self.file_path)
+        return pd.read_csv(self.file_path,sep="|")
        
 
 class ExtractorJson(BaseExtractor):
@@ -59,9 +60,10 @@ class ExtractorTMDB():
         self.api_key = api_key
         self.base_url = "https://api.themoviedb.org/3"
         self.semaphore = asyncio.Semaphore(40)
+        self.lista_resultados_tmdb = list()
+        self.limit = httpx.Limits(max_connections=50,max_keepalive_connections=20)
 
-
-    async def busca_dados_completo(self,client:httpx.AsyncClient,id):
+    async def _busca_dados_completo(self,client:httpx.AsyncClient,id):
         """Retorna em formato JSON o id, data de lançamento, orçamento e receita"""
         full_api= f"{self.base_url}/movie/{id}?api_key={self.api_key}"
         async with self.semaphore:
@@ -71,8 +73,30 @@ class ExtractorTMDB():
                     dados = resp.json()
                     return {"imdb_id":dados.get("imdb_id"), "data_lancamento":dados.get("release_date"),
                             "orcamento":dados.get("budget"),"receita":dados.get("revenue")}
-                print(resp.status_code)
                 return None
             except Exception as error:
-                print("Não foi possivel fazer os requests")
-                return error
+                print(f"Não foi possivel fazer os requests \n Erro:{error}")
+                raise error
+            
+    async def _run_async_requests(self,lista_ids:list) -> pd.DataFrame:
+        async with httpx.AsyncClient(limits=self.limit,timeout=None) as client:
+            tasks = [self._busca_dados_completo(client,id) for id in lista_ids]
+
+            with tqdm(total=len(tasks),desc=f"Extraindo Dados ({len(lista_ids)}) ",unit="filme") as pbar:
+                for coro in asyncio.as_completed(tasks):
+                    try:
+                        resp = await coro
+                        if resp:
+                            self.lista_resultados_tmdb.append(resp)
+                    except Exception as error:
+                        print(error)
+                        pass 
+                    finally:
+                        pbar.update(1)
+            return self.lista_resultados_tmdb
+    def extract_dados_em_lote(self,lista_ids:list) -> list:
+        """Método público que o orquestrador irá chamar"""
+        print(f"Iniciando extração de {len(lista_ids)} datas na API do TMDB...")
+    
+        resultados = asyncio.run(self._run_async_requests(lista_ids))
+        return resultados  
