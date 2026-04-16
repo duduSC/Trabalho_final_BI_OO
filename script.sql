@@ -13,7 +13,7 @@ CREATE TABLE refined.dim_filme (
 drop table if exists refined.dim_genero cascade;
 CREATE TABLE refined.dim_genero (
     sk_genero SERIAL PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL UNIQUE
+    nome VARCHAR(100) UNIQUE
 );
 
 -- 3. Tabela de Dimensão: Data (Simplificada para o seu caso)
@@ -32,7 +32,7 @@ CREATE TABLE refined.dim_data (
 drop table if exists refined.fato_filme cascade;
 CREATE TABLE refined.fato_filme (
     sk_filme INTEGER NOT NULL,
-    sk_data_lancamento INTEGER,
+    sk_data INTEGER,
     sk_genero_principal INTEGER,
     sk_genero_secundario INTEGER,
     numero_votos INTEGER DEFAULT 0,
@@ -41,7 +41,7 @@ CREATE TABLE refined.fato_filme (
     receita NUMERIC(100,2) DEFAULT 0.0,
     tempo_minutos INTEGER DEFAULT 0,
     CONSTRAINT fk_fato_filme FOREIGN KEY (sk_filme) REFERENCES refined.dim_filme (sk_filme),
-    CONSTRAINT fk_fato_data FOREIGN KEY (sk_data_lancamento) REFERENCES refined.dim_data (sk_data),
+    CONSTRAINT fk_fato_data FOREIGN KEY (sk_data) REFERENCES refined.dim_data (sk_data),
     CONSTRAINT fk_fato_genero_principal FOREIGN KEY (sk_genero_principal) REFERENCES refined.dim_genero,
     CONSTRAINT fk_fato_genero_secundario FOREIGN KEY (sk_genero_secundario) REFERENCES refined.dim_genero
 

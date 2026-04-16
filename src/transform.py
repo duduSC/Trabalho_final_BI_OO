@@ -24,8 +24,8 @@ class Transform:
                 )
             
             df_limpo["genero"] = df_limpo["genero"].str.split(",")
-            df_limpo["genero_principal"] = df_limpo["genero"].explode(",").get(0)
-            df_limpo["genero_secundario"] = df_limpo["genero"].explode(",").get(1)
+            df_limpo["genero_principal"] = df_limpo["genero"].str.get(0)
+            df_limpo["genero_secundario"] = df_limpo["genero"].str.get(1)
             df_limpo = df_limpo[df_limpo["numero_votos"] > 100]
             return df_limpo
         
@@ -59,6 +59,7 @@ class Transform:
         dim_genero = pd.DataFrame(dim_genero)
         dim_genero["sk_genero"]= range(len(dim_genero))
         dim_genero = dim_genero[["sk_genero", "nome"]]
+        dim_genero.loc[len(dim_genero)] = [999,"sem gênero"]
         dim_genero =dim_genero.drop_duplicates()
         return dim_genero
     
@@ -109,12 +110,16 @@ class Transform:
 
         fato_filme = pd.merge(fato_filme,dim_data,left_on="data_lancamento",right_on="sk_data",how="inner")
         dict_generos = dict(zip(dim_genero["nome"],dim_genero["sk_genero"]))
-
+        dict_generos[pd.NA] = 999
+        
         fato_filme["sk_genero_principal"] = fato_filme["genero_principal"].map(dict_generos)
         fato_filme["sk_genero_secundario"] = fato_filme["genero_secundario"].map(dict_generos)
 
+
         fato_filme["sk_genero_principal"] = fato_filme["sk_genero_principal"].astype("Int64")
         fato_filme["sk_genero_secundario"] = fato_filme["sk_genero_secundario"].astype("Int64")
+        
+
         fato_filme = fato_filme[["sk_filme","sk_data","sk_genero_principal","sk_genero_secundario",
                                  "numero_votos","nota_media","orcamento","receita","tempo_minutos"]]
         return fato_filme

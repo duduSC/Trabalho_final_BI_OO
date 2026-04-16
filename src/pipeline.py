@@ -40,9 +40,12 @@ class PipelineETL():
             df_tmdb = pd.DataFrame(lista_tmdb)
             self.load.save_data(df_tmdb,"raw","arquivo_json")
 
-            
-            # Camada REFINED
+            # Camada TRUSTED
             df_limpo= df_limpo.merge(df_tmdb,on="imdb_id",how="inner")
+            
+            self.load.save_data(df_limpo,"trusted","df_movies")
+
+            # Camada REFINED
             dim_data = self.transform.create_dim_data(df_limpo)
             fato_filme = self.transform.create_fato_filme(df_limpo,dim_filme,dim_genero,dim_data)
 
@@ -50,11 +53,12 @@ class PipelineETL():
             self.load.save_data(dim_genero,"refined","dim_genero")
             self.load.save_data(dim_data,"refined","dim_data")
             self.load.save_data(fato_filme,"refined","fato_filme")
+            
         except Exception as fatal_error:
             print("\n" + "="*50)
             print("🚨 FALHA CRÍTICA NO PIPELINE 🚨")
             print("="*50)
             print("\nMatando a execução para proteger a integridade dos dados...")
             print(traceback.print_exc())
-            # O código 1 avisa ao sistema operacional (Windows/Linux) que o programa falhou
-            sys.exit(1)
+            # O código 1 avisa ao sistema operacional que o programa falhou
+            sys.exit(1) 

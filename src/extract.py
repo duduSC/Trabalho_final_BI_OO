@@ -61,7 +61,7 @@ class ExtractorTMDB():
         self.base_url = "https://api.themoviedb.org/3"
         self.semaphore = asyncio.Semaphore(40)
         self.lista_resultados_tmdb = list()
-        self.limit = httpx.Limits(max_connections=50,max_keepalive_connections=20)
+        self.limit = httpx.Limits(max_connections=100,max_keepalive_connections=20)
 
     async def _busca_dados_completo(self,client:httpx.AsyncClient,id):
         """Retorna em formato JSON o id, data de lançamento, orçamento e receita"""

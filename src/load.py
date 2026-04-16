@@ -28,7 +28,8 @@ class Loader:
                       con=self.engine,
                       schema=schema,
                       if_exists=mode,
-                      name=tabela)  
+                      name=tabela)
+            print(f"Arquivo salvo com sucesso!!")
         except Exception as error:
             print(f"Erro ao tentar salvar arquivo na camada {schema}! ")
             raise error
